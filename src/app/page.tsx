@@ -1,101 +1,120 @@
-import Image from "next/image";
+'use client'
+
+import { useState, useEffect } from 'react'
+import ComplaintInput from '@/components/ComplaintInput'
+import GroupCard from '@/components/GroupCard'
+
+interface UserSession {
+  userId: string
+  name: string
+  avatar: string
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [session, setSession] = useState<UserSession | null>(null)
+  const [groups, setGroups] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [userCount, setUserCount] = useState(0)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    fetch('/api/auth/refresh', { method: 'POST' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.code === 0) setSession(d.data)
+      })
+      .finally(() => setLoading(false))
+
+    fetch('/api/complaints')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.code === 0) {
+          setGroups(d.data || [])
+          setUserCount(d.data?.reduce((sum: number, g: any) => sum + g.count, 0) || 0)
+        }
+      })
+  }, [])
+
+  const refreshGroups = () => {
+    fetch('/api/complaints')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.code === 0) {
+          setGroups(d.data || [])
+          setUserCount(d.data?.reduce((sum: number, g: any) => sum + g.count, 0) || 0)
+        }
+      })
+  }
+
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
+      {/* Header */}
+      <header className="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-sm font-bold">
+            同
+          </div>
+          <span className="text-lg font-semibold">Agent同声</span>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+        {loading ? null : session ? (
+          <div className="flex items-center gap-2 text-sm text-slate-400">
+            <div className="w-6 h-6 rounded-full bg-slate-700" />
+            <span>{session.name}</span>
+          </div>
+        ) : (
+          <a
+            href="/api/auth/login"
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-600 text-sm font-medium hover:opacity-90 transition"
+          >
+            用 SecondMe 登录
+          </a>
+        )}
+      </header>
+
+      {/* Hero */}
+      <section className="px-6 py-16 max-w-4xl mx-auto text-center">
+        <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">
+          你不是一个人在战斗
+        </h1>
+        <p className="text-slate-400 text-lg mb-2">
+          AI 分身自动找到同命人，聚合投诉，生成集体报告
+        </p>
+        <div className="text-2xl font-bold text-orange-400 mb-8">
+          已有 <span className="text-3xl">{userCount}</span> 人找到同命人
+        </div>
+
+        {session ? (
+          <ComplaintInput onSuccess={refreshGroups} />
+        ) : (
+          <div className="bg-slate-800/50 rounded-xl p-8 border border-slate-700">
+            <p className="text-slate-400 mb-4">登录后，你的 AI 分身将自动分析投诉并寻找同命人</p>
+            <a
+              href="/api/auth/login"
+              className="inline-block px-6 py-3 rounded-lg bg-gradient-to-r from-orange-500 to-red-600 font-medium hover:opacity-90 transition"
+            >
+              用 SecondMe 登录，开始维权
+            </a>
+          </div>
+        )}
+      </section>
+
+      {/* Active Groups */}
+      <section className="px-6 pb-16 max-w-4xl mx-auto">
+        <h2 className="text-xl font-semibold mb-4 text-slate-300">正在聚合的投诉</h2>
+        {groups.length === 0 ? (
+          <p className="text-slate-500 text-center py-8">暂无进行中的聚合</p>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {groups.map((g) => (
+              <GroupCard key={g.id} group={g} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-800 px-6 py-6 text-center text-sm text-slate-500">
+        Agent同声 · 知乎 × Second Me A2A for ReConnect 黑客松
       </footer>
-    </div>
-  );
+    </main>
+  )
 }
