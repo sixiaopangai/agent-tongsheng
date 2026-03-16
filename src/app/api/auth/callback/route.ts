@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCode, storeTokens, getUserInfo } from '@/lib/auth'
 import { redis } from '@/lib/redis'
-import { v4 as uuidv4 } from 'uuid'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -30,7 +29,7 @@ export async function GET(req: NextRequest) {
     await redis.sadd('all:users', userId)
 
     // Create session
-    const sessionId = uuidv4()
+    const sessionId = crypto.randomUUID()
     await redis.set(`session:${sessionId}`, JSON.stringify({ userId, name: userInfo.name, avatar: userInfo.avatar }), { ex: 7200 })
 
     const response = NextResponse.redirect(new URL('/', req.url))

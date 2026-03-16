@@ -1,6 +1,5 @@
 import { redis } from './redis'
 import { getPusherServer } from './pusher'
-import { v4 as uuidv4 } from 'uuid'
 
 export interface Complaint {
   id: string
@@ -44,7 +43,7 @@ function isSimilarCategory(a: string, b: string): boolean {
 export async function createComplaint(data: Omit<Complaint, 'id' | 'status' | 'groupId' | 'createdAt'>): Promise<Complaint> {
   const complaint: Complaint = {
     ...data,
-    id: uuidv4(),
+    id: crypto.randomUUID(),
     status: 'matching',
     groupId: null,
     createdAt: Date.now(),
@@ -88,7 +87,7 @@ export async function findOrCreateGroup(complaint: Complaint): Promise<string> {
 }
 
 async function createGroup(complaint: Complaint): Promise<string> {
-  const groupId = uuidv4()
+  const groupId = crypto.randomUUID()
   const group: MatchGroup = {
     id: groupId,
     brand: complaint.brand,
