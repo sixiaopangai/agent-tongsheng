@@ -1,12 +1,21 @@
-import CryptoJS from 'crypto-js'
+import crypto from 'crypto'
 
-const KEY = process.env.TOKEN_ENCRYPT_KEY || 'default-key-change-me-in-prod!!'
+const ALGORITHM = 'aes-256-cbc'
+const KEY = crypto.scryptSync(process.env.TOKEN_ENCRYPT_KEY || 'default-key-change-me-in-prod!!', 'salt', 32)
 
 export function encrypt(text: string): string {
-  return CryptoJS.AES.encrypt(text, KEY).toString()
+  const iv = crypto.randomBytes(16)
+  const cipher = crypto.createCipheriv(ALGORITHM, KEY, iv)
+  let encrypted = cipher.update(text, 'utf8', 'hex')
+  encrypted += cipher.final('hex')
+  return iv.toString('hex') + ':' + encrypted
 }
 
 export function decrypt(ciphertext: string): string {
-  const bytes = CryptoJS.AES.decrypt(ciphertext, KEY)
-  return bytes.toString(CryptoJS.enc.Utf8)
+  const [ivHex, encrypted] = ciphertext.split(':')
+  const iv = Buffer.from(ivHex, 'hex')
+  const decipher = crypto.createDecipheriv(ALGORITHM, KEY, iv)
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+  decrypted += decipher.final('utf8')
+  return decrypted
 }

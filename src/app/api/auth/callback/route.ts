@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCode, storeTokens, getUserInfo } from '@/lib/auth'
 import { redis } from '@/lib/redis'
