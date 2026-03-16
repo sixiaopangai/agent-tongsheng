@@ -30,6 +30,13 @@ export interface MatchGroup {
 
 const DEFAULT_THRESHOLD = 10
 
+// Upstash REST client may return parsed objects or strings
+function safeParse<T>(data: any): T | null {
+  if (!data) return null
+  if (typeof data === 'object') return data as T
+  try { return JSON.parse(data) as T } catch { return null }
+}
+
 function isSimilarCategory(a: string, b: string): boolean {
   if (a === b) return true
   const similar: Record<string, string[]> = {
@@ -51,7 +58,6 @@ export async function createComplaint(data: Omit<Complaint, 'id' | 'status' | 'g
   await redis.set(`complaint:${complaint.id}`, JSON.stringify(complaint), { ex: 30 * 86400 })
   await redis.sadd(`user:complaints:${complaint.userId}`, complaint.id)
 
-  // Find or create group
   const groupId = await findOrCreateGroup(complaint)
   complaint.groupId = groupId
   complaint.status = 'matching'
@@ -61,7 +67,6 @@ export async function createComplaint(data: Omit<Complaint, 'id' | 'status' | 'g
 }
 
 export async function findOrCreateGroup(complaint: Complaint): Promise<string> {
-  // 1. Exact match: same brand + same category
   const exactKey = `group:index:${complaint.brand}:${complaint.category}`
   const existingGroup = await redis.get<string>(exactKey)
   if (existingGroup) {
@@ -69,20 +74,15 @@ export async function findOrCreateGroup(complaint: Complaint): Promise<string> {
     return existingGroup
   }
 
-  // 2. Fuzzy match: same brand + similar category
   const brandGroups = await redis.smembers(`brand:groups:${complaint.brand}`)
   for (const groupId of brandGroups) {
-    const groupData = await redis.get<string>(`group:${groupId}`)
-    if (groupData) {
-      const group: MatchGroup = JSON.parse(groupData)
-      if (isSimilarCategory(complaint.category, group.category)) {
-        await joinGroup(groupId, complaint)
-        return groupId
-      }
+    const group = safeParse<MatchGroup>(await redis.get(`group:${groupId}`))
+    if (group && isSimilarCategory(complaint.category, group.category)) {
+      await joinGroup(groupId, complaint)
+      return groupId
     }
   }
 
-  // 3. Create new group
   return await createGroup(complaint)
 }
 
@@ -118,12 +118,10 @@ async function joinGroup(groupId: string, complaint: Complaint) {
   pipe.set(`complaint:group:${complaint.id}`, groupId)
   await pipe.exec()
 
-  // Update group count
   const memberIds = await redis.smembers(`group:complaints:${groupId}`)
   const count = memberIds.length
-  const groupData = await redis.get<string>(`group:${groupId}`)
-  if (groupData) {
-    const group: MatchGroup = JSON.parse(groupData)
+  const group = safeParse<MatchGroup>(await redis.get(`group:${groupId}`))
+  if (group) {
     group.count = count
     group.updatedAt = Date.now()
     if (count >= group.threshold && group.status === 'forming') {
@@ -132,7 +130,6 @@ async function joinGroup(groupId: string, complaint: Complaint) {
     await redis.set(`group:${groupId}`, JSON.stringify(group), { ex: 30 * 86400 })
   }
 
-  // Pusher realtime push
   if (process.env.NEXT_PUBLIC_PUSHER_KEY && process.env.PUSHER_SECRET) {
     try {
       const pusher = getPusherServer()
@@ -145,13 +142,11 @@ async function joinGroup(groupId: string, complaint: Complaint) {
 }
 
 export async function getComplaint(id: string): Promise<Complaint | null> {
-  const data = await redis.get<string>(`complaint:${id}`)
-  return data ? JSON.parse(data) : null
+  return safeParse<Complaint>(await redis.get(`complaint:${id}`))
 }
 
 export async function getGroup(id: string): Promise<MatchGroup | null> {
-  const data = await redis.get<string>(`group:${id}`)
-  return data ? JSON.parse(data) : null
+  return safeParse<MatchGroup>(await redis.get(`group:${id}`))
 }
 
 export async function getGroupComplaints(groupId: string): Promise<Complaint[]> {

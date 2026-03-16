@@ -10,8 +10,9 @@ export async function writebackToUserMemory(
   reportUrl: string
 ) {
   const token = await getValidToken(complaint.userId)
-  const groupData = await redis.get<string>(`group:${groupId}`)
-  const groupCount = groupData ? JSON.parse(groupData).count : 0
+  const groupData = await redis.get(`group:${groupId}`)
+  const parsed = typeof groupData === 'string' ? JSON.parse(groupData) : groupData
+  const groupCount = parsed?.count || 0
 
   const res = await fetch(`${SECONDME_BASE}/api/secondme/agent_memory/ingest`, {
     method: 'POST',
