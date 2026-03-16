@@ -71,3 +71,35 @@ export async function toggleReaction(targetId: string, targetType: string, actio
   })
   return res.json()
 }
+
+export async function getCircleInfo(ringId: string) {
+  const path = '/openapi/ring/detail'
+  const url = `${ZHIHU_BASE}${path}?ring_id=${ringId}`
+  const res = await fetch(url, { headers: generateHeaders('GET', path) })
+  return res.json()
+}
+
+export async function getCirclePins(ringId: string) {
+  const path = '/openapi/ring/pins'
+  const url = `${ZHIHU_BASE}${path}?ring_id=${ringId}`
+  const res = await fetch(url, { headers: generateHeaders('GET', path) })
+  return res.json()
+}
+
+export async function deleteComment(commentId: string) {
+  const path = '/openapi/comment/delete'
+  const body = JSON.stringify({ comment_id: commentId })
+  const res = await fetch(`${ZHIHU_BASE}${path}`, {
+    method: 'POST',
+    headers: generateHeaders('POST', path, body),
+    body,
+  })
+  return res.json()
+}
+
+export async function getComments(targetId: string, targetType: string) {
+  const path = '/openapi/comment/list'
+  const url = `${ZHIHU_BASE}${path}?target_id=${targetId}&target_type=${targetType}`
+  const res = await fetch(url, { headers: generateHeaders('GET', path) })
+  return res.json()
+}

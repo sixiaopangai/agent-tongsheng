@@ -3,12 +3,17 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import MatchCounter from '@/components/MatchCounter'
+import Timeline from '@/components/Timeline'
+import ZhihuComments from '@/components/ZhihuComments'
 
 export default function GroupPage() {
   const { id } = useParams<{ id: string }>()
   const [group, setGroup] = useState<any>(null)
   const [report, setReport] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [publishResult, setPublishResult] = useState<string | null>(null)
+  const [publishedPinId, setPublishedPinId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -32,6 +37,30 @@ export default function GroupPage() {
       setError('网络错误')
     } finally {
       setGenerating(false)
+    }
+  }
+
+  const handlePublishToZhihu = async () => {
+    if (!report) return
+    setPublishing(true)
+    try {
+      const res = await fetch('/api/zhihu/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: report }),
+      })
+      const data = await res.json()
+      if (data?.code === 0) {
+        setPublishResult('已发布到知乎圈子')
+        const pinId = data.data?.pin_id || data.data?.data?.pin_id || data.data?.id
+        if (pinId) setPublishedPinId(pinId)
+      } else {
+        setPublishResult('发布失败：' + (data.error || '未知错误'))
+      }
+    } catch {
+      setPublishResult('发布失败：网络错误')
+    } finally {
+      setPublishing(false)
     }
   }
 
@@ -73,6 +102,9 @@ export default function GroupPage() {
           </div>
         </div>
 
+        {/* Timeline */}
+        <Timeline events={group.timeline || []} />
+
         {/* Complaints list */}
         {group.complaints?.length > 0 && (
           <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700 mb-6">
@@ -100,12 +132,26 @@ export default function GroupPage() {
           <div className="bg-slate-800/50 rounded-xl p-6 border border-green-800">
             <h2 className="text-green-400 font-medium mb-3">集体投诉报告</h2>
             <div className="text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">{report}</div>
-            <button
-              onClick={() => navigator.clipboard.writeText(report)}
-              className="mt-4 px-4 py-2 text-sm bg-slate-700 rounded-lg hover:bg-slate-600 transition"
-            >
-              复制报告
-            </button>
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => navigator.clipboard.writeText(report)}
+                className="px-4 py-2 text-sm bg-slate-700 rounded-lg hover:bg-slate-600 transition"
+              >
+                复制报告
+              </button>
+              <button
+                onClick={handlePublishToZhihu}
+                disabled={publishing}
+                className="px-4 py-2 text-sm bg-blue-700 rounded-lg hover:bg-blue-600 disabled:opacity-50 transition"
+              >
+                {publishing ? '发布中...' : '发布到知乎圈子'}
+              </button>
+            </div>
+            {publishResult && (
+              <p className={`text-sm mt-2 ${publishResult.includes('失败') ? 'text-red-400' : 'text-green-400'}`}>
+                {publishResult}
+              </p>
+            )}
           </div>
         ) : (
           <button
@@ -117,6 +163,11 @@ export default function GroupPage() {
           </button>
         )}
         {error && <p className="text-red-400 text-sm mt-2 text-center">{error}</p>}
+
+        {/* Comments section — shown after publishing to Zhihu */}
+        {publishedPinId && (
+          <ZhihuComments targetId={publishedPinId} targetType="pin" />
+        )}
       </div>
     </main>
   )

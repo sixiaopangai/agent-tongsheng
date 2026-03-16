@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getGroup, getGroupComplaints } from '@/lib/matchingEngine'
+import { getGroup, getGroupComplaints, getGroupTimeline } from '@/lib/matchingEngine'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -9,7 +9,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const group = await getGroup(id)
     if (!group) return NextResponse.json({ error: 'Group not found' }, { status: 404 })
 
-    const complaints = await getGroupComplaints(id)
+    const [complaints, timeline] = await Promise.all([
+      getGroupComplaints(id),
+      getGroupTimeline(id),
+    ])
+
     return NextResponse.json({
       code: 0,
       data: {
@@ -21,6 +25,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
           demand: c.demand,
           createdAt: c.createdAt,
         })),
+        timeline,
       },
     })
   } catch (err: any) {

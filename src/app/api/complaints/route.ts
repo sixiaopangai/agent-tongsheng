@@ -1,18 +1,10 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { redis } from '@/lib/redis'
 import { getValidToken } from '@/lib/auth'
 import { extractIntent } from '@/lib/extractIntent'
 import { createComplaint, getAllGroups } from '@/lib/matchingEngine'
-
-async function getSession(req: NextRequest) {
-  const sessionId = req.cookies.get('session')?.value
-  if (!sessionId) return null
-  const raw = await redis.get<string>(`session:${sessionId}`)
-  if (!raw) return null
-  return typeof raw === 'string' ? JSON.parse(raw) : raw
-}
+import { getSession } from '@/lib/session'
 
 export async function POST(req: NextRequest) {
   const session = await getSession(req)

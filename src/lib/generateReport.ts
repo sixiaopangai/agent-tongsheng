@@ -1,5 +1,6 @@
 import { getValidToken } from './auth'
-import { getGroupComplaints, getGroup } from './matchingEngine'
+import { getGroupComplaints, getGroup, addTimelineEvent } from './matchingEngine'
+import { writebackToUserMemory } from './writebackMemory'
 import { redis } from './redis'
 
 const SECONDME_BASE = 'https://api.mindverse.com/gate/lab'
@@ -96,6 +97,21 @@ ${validStatements.map((s, i) => `消费者${i + 1}：${s}`).join('\n')}
     group.reportUrl = `/group/${groupId}/report`
     await redis.set(`group:${groupId}`, JSON.stringify(group), { ex: 30 * 86400 })
   }
+
+  // Timeline event
+  await addTimelineEvent(groupId, {
+    type: 'report_generated',
+    message: '集体投诉报告已生成',
+    timestamp: Date.now(),
+  })
+
+  // Writeback to each user's SecondMe memory (best-effort)
+  const reportUrl = `${process.env.NEXT_PUBLIC_BASE_URL || ''}/group/${groupId}`
+  await Promise.allSettled(
+    complaints.map((c) =>
+      writebackToUserMemory(c, groupId, reportUrl).catch(() => {})
+    )
+  )
 
   return report
 }

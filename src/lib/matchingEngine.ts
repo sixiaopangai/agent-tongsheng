@@ -28,6 +28,12 @@ export interface MatchGroup {
   updatedAt: number
 }
 
+export interface TimelineEvent {
+  type: 'group_created' | 'member_joined' | 'threshold_reached' | 'report_generated'
+  message: string
+  timestamp: number
+}
+
 const DEFAULT_THRESHOLD = 10
 
 // Upstash REST client may return parsed objects or strings
@@ -57,6 +63,7 @@ export async function createComplaint(data: Omit<Complaint, 'id' | 'status' | 'g
   }
   await redis.set(`complaint:${complaint.id}`, JSON.stringify(complaint), { ex: 30 * 86400 })
   await redis.sadd(`user:complaints:${complaint.userId}`, complaint.id)
+  await incrementStats(complaint.userId)
 
   const groupId = await findOrCreateGroup(complaint)
   complaint.groupId = groupId
@@ -109,6 +116,12 @@ async function createGroup(complaint: Complaint): Promise<string> {
   pipe.sadd('all:groups', groupId)
   await pipe.exec()
 
+  await addTimelineEvent(groupId, {
+    type: 'group_created',
+    message: `聚合组创建：${complaint.brand} - ${complaint.category}`,
+    timestamp: Date.now(),
+  })
+
   return groupId
 }
 
@@ -128,6 +141,20 @@ async function joinGroup(groupId: string, complaint: Complaint) {
       group.status = 'ready'
     }
     await redis.set(`group:${groupId}`, JSON.stringify(group), { ex: 30 * 86400 })
+
+    await addTimelineEvent(groupId, {
+      type: 'member_joined',
+      message: `第 ${count} 位同命人加入`,
+      timestamp: Date.now(),
+    })
+
+    if (count >= (group.threshold) && group.status === 'ready') {
+      await addTimelineEvent(groupId, {
+        type: 'threshold_reached',
+        message: `已达到 ${group.threshold} 人阈值，可以生成集体报告`,
+        timestamp: Date.now(),
+      })
+    }
   }
 
   if (process.env.NEXT_PUBLIC_PUSHER_KEY && process.env.PUSHER_SECRET) {
@@ -167,4 +194,50 @@ export async function getAllGroups(): Promise<MatchGroup[]> {
     if (g) groups.push(g)
   }
   return groups.sort((a, b) => b.count - a.count)
+}
+
+// --- Timeline ---
+
+export async function addTimelineEvent(groupId: string, event: TimelineEvent) {
+  await redis.rpush(`group:timeline:${groupId}`, JSON.stringify(event))
+  await redis.expire(`group:timeline:${groupId}`, 30 * 86400)
+}
+
+export async function getGroupTimeline(groupId: string): Promise<TimelineEvent[]> {
+  const raw = await redis.lrange(`group:timeline:${groupId}`, 0, -1)
+  return raw.map((r: any) => (typeof r === 'string' ? JSON.parse(r) : r))
+}
+
+// --- Stats ---
+
+export async function getStats() {
+  const [userCount, complaintCount, groupIds] = await Promise.all([
+    redis.scard('all:users'),
+    redis.get<number>('stat:complaints'),
+    redis.smembers('all:groups'),
+  ])
+  return {
+    users: Number(userCount) || 0,
+    complaints: Number(complaintCount) || 0,
+    groups: groupIds.length,
+  }
+}
+
+export async function incrementStats(userId: string) {
+  const pipe = redis.pipeline()
+  pipe.sadd('all:users', userId)
+  pipe.incr('stat:complaints')
+  await pipe.exec()
+}
+
+// --- User complaints ---
+
+export async function getUserComplaints(userId: string): Promise<Complaint[]> {
+  const ids = await redis.smembers(`user:complaints:${userId}`)
+  const complaints: Complaint[] = []
+  for (const id of ids) {
+    const c = await getComplaint(id)
+    if (c) complaints.push(c)
+  }
+  return complaints.sort((a, b) => b.createdAt - a.createdAt)
 }

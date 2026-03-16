@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import ZhihuResults from './ZhihuResults'
 
 interface Props {
   onSuccess: () => void
@@ -67,6 +68,10 @@ export default function ComplaintInput({ onSuccess }: Props) {
             查看聚合组 →
           </a>
         )}
+
+        {/* Zhihu related results */}
+        {result.brand && <ZhihuResults keyword={`${result.brand} ${result.category} 投诉`} />}
+
         <button
           onClick={() => { setStep('input'); setText(''); setResult(null) }}
           className="block mt-3 text-slate-500 text-sm hover:text-slate-300"

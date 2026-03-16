@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react'
 import ComplaintInput from '@/components/ComplaintInput'
 import GroupCard from '@/components/GroupCard'
+import StatsBar from '@/components/StatsBar'
+import ZhihuHotTopics from '@/components/ZhihuHotTopics'
+import ZhihuCircle from '@/components/ZhihuCircle'
 
 interface UserSession {
   userId: string
@@ -55,19 +58,26 @@ export default function Home() {
           </div>
           <span className="text-lg font-semibold">Agent同声</span>
         </div>
-        {loading ? null : session ? (
-          <div className="flex items-center gap-2 text-sm text-slate-400">
-            <div className="w-6 h-6 rounded-full bg-slate-700" />
-            <span>{session.name}</span>
-          </div>
-        ) : (
-          <a
-            href="/api/auth/login"
-            className="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-600 text-sm font-medium hover:opacity-90 transition"
-          >
-            用 SecondMe 登录
-          </a>
-        )}
+        <div className="flex items-center gap-4">
+          {loading ? null : session ? (
+            <>
+              <a href="/history" className="text-sm text-slate-400 hover:text-orange-400 transition">
+                我的投诉
+              </a>
+              <div className="flex items-center gap-2 text-sm text-slate-400">
+                <div className="w-6 h-6 rounded-full bg-slate-700" />
+                <span>{session.name}</span>
+              </div>
+            </>
+          ) : (
+            <a
+              href="/api/auth/login"
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-600 text-sm font-medium hover:opacity-90 transition"
+            >
+              用 SecondMe 登录
+            </a>
+          )}
+        </div>
       </header>
 
       {/* Hero */}
@@ -81,6 +91,8 @@ export default function Home() {
         <div className="text-2xl font-bold text-orange-400 mb-8">
           已有 <span className="text-3xl">{userCount}</span> 人找到同命人
         </div>
+
+        <StatsBar />
 
         {session ? (
           <ComplaintInput onSuccess={refreshGroups} />
@@ -98,7 +110,7 @@ export default function Home() {
       </section>
 
       {/* Active Groups */}
-      <section className="px-6 pb-16 max-w-4xl mx-auto">
+      <section className="px-6 pb-12 max-w-4xl mx-auto">
         <h2 className="text-xl font-semibold mb-4 text-slate-300">正在聚合的投诉</h2>
         {groups.length === 0 ? (
           <p className="text-slate-500 text-center py-8">暂无进行中的聚合</p>
@@ -111,9 +123,48 @@ export default function Home() {
         )}
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800 px-6 py-6 text-center text-sm text-slate-500">
-        Agent同声 · 知乎 × Second Me A2A for ReConnect 黑客松
+      {/* Zhihu Hot Topics */}
+      <ZhihuHotTopics />
+
+      {/* Zhihu Circle */}
+      <ZhihuCircle />
+
+      {/* Footer with 刘看山 */}
+      <footer className="border-t border-slate-800 px-6 py-8 text-center">
+        <div className="flex flex-col items-center gap-3 mb-4">
+          <div className="relative w-16 h-16">
+            <svg viewBox="0 0 120 120" className="w-full h-full drop-shadow-lg">
+              {/* 刘看山 — 知乎吉祥物北极狐简化形象 */}
+              <ellipse cx="60" cy="90" rx="30" ry="12" fill="#1e293b" opacity="0.3" />
+              {/* Body */}
+              <ellipse cx="60" cy="68" rx="26" ry="28" fill="#f8fafc" />
+              {/* Head */}
+              <circle cx="60" cy="42" r="22" fill="#f8fafc" />
+              {/* Left ear */}
+              <polygon points="42,28 36,8 50,24" fill="#f8fafc" />
+              <polygon points="43,26 39,14 49,24" fill="#fbbf24" />
+              {/* Right ear */}
+              <polygon points="78,28 84,8 70,24" fill="#f8fafc" />
+              <polygon points="77,26 81,14 71,24" fill="#fbbf24" />
+              {/* Eyes */}
+              <circle cx="50" cy="40" r="4" fill="#1e293b" />
+              <circle cx="70" cy="40" r="4" fill="#1e293b" />
+              <circle cx="51.5" cy="38.5" r="1.5" fill="#fff" />
+              <circle cx="71.5" cy="38.5" r="1.5" fill="#fff" />
+              {/* Nose */}
+              <ellipse cx="60" cy="47" rx="3" ry="2" fill="#1e293b" />
+              {/* Mouth */}
+              <path d="M55 50 Q60 54 65 50" stroke="#1e293b" strokeWidth="1.5" fill="none" />
+              {/* Scarf */}
+              <path d="M38 56 Q60 64 82 56 Q82 62 60 66 Q38 62 38 56Z" fill="#3b82f6" />
+              <rect x="56" y="64" width="8" height="12" rx="3" fill="#3b82f6" />
+            </svg>
+          </div>
+          <span className="text-xs text-slate-500">刘看山 · 知乎吉祥物</span>
+        </div>
+        <p className="text-sm text-slate-500">
+          Agent同声 · 知乎 × Second Me A2A for ReConnect 黑客松
+        </p>
       </footer>
     </main>
   )
