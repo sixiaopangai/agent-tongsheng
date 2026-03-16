@@ -32,8 +32,8 @@ export default function ComplaintInput({ onSuccess }: Props) {
         setError(data.error || '提交失败')
         setStep('input')
       }
-    } catch {
-      setError('网络错误，请重试')
+    } catch (e: any) {
+      setError(e?.message || '网络错误，请重试')
       setStep('input')
     }
   }

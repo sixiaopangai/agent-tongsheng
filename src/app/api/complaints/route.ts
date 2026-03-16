@@ -9,8 +9,9 @@ import { createComplaint, getAllGroups } from '@/lib/matchingEngine'
 async function getSession(req: NextRequest) {
   const sessionId = req.cookies.get('session')?.value
   if (!sessionId) return null
-  const data = await redis.get<string>(`session:${sessionId}`)
-  return data ? JSON.parse(data) : null
+  const raw = await redis.get<string>(`session:${sessionId}`)
+  if (!raw) return null
+  return typeof raw === 'string' ? JSON.parse(raw) : raw
 }
 
 export async function POST(req: NextRequest) {
