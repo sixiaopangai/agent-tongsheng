@@ -10,11 +10,12 @@ export async function GET(req: NextRequest) {
   const error = searchParams.get('error')
 
   if (error) {
-    return NextResponse.redirect(new URL(`/?error=${error}`, req.url))
+    const errorDesc = searchParams.get('error_description') || error
+    return NextResponse.redirect(new URL(`/?error=${encodeURIComponent(errorDesc)}`, process.env.NEXT_PUBLIC_APP_URL!))
   }
 
   if (!code) {
-    return NextResponse.redirect(new URL('/?error=no_code', req.url))
+    return NextResponse.redirect(new URL('/?error=no_code', process.env.NEXT_PUBLIC_APP_URL!))
   }
 
   try {
@@ -34,16 +35,23 @@ export async function GET(req: NextRequest) {
     const sessionId = crypto.randomUUID()
     await redis.set(`session:${sessionId}`, JSON.stringify({ userId, name: userInfo.name, avatar: userInfo.avatar }), { ex: 7200 })
 
-    const response = NextResponse.redirect(new URL('/', req.url))
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://agent-tongsheng.vercel.app'
+    const response = NextResponse.redirect(new URL('/', appUrl))
     response.cookies.set('session', sessionId, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'lax',
       maxAge: 7200,
+      path: '/',
     })
     return response
   } catch (err: any) {
     console.error('OAuth callback error:', err)
-    return NextResponse.redirect(new URL(`/?error=auth_failed`, req.url))
+    // Return visible error for debugging
+    return NextResponse.json({
+      error: 'auth_failed',
+      message: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    }, { status: 500 })
   }
 }
