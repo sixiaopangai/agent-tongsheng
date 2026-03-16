@@ -21,7 +21,13 @@ export default function ZhihuHotTopics() {
       .then((r) => r.json())
       .then((d) => {
         const items = d?.data?.data?.list || d?.data?.data || d?.data || []
-        setTopics(Array.isArray(items) ? items.slice(0, 6) : [])
+        if (!Array.isArray(items)) return
+        const keywords = ['投诉', '维权', '消费', '售后', '退款', '赔偿', '欺诈', '虚假', '质量', '霸王条款', '315', '3·15', '曝光', '侵权', '假货', '客服', '商家', '消协', '工商', '市场监管', '食品安全', '隐私', '泄露', '诈骗', '套路', '黑心', '坑人', '差评', '权益', '保障']
+        const filtered = items.filter((t: any) => {
+          const text = (t.title || '') + (t.body || '')
+          return keywords.some((kw) => text.includes(kw))
+        })
+        setTopics(filtered.slice(0, 6))
       })
       .catch(() => {})
   }, [])
@@ -55,7 +61,14 @@ export default function ZhihuHotTopics() {
     }
   }
 
-  if (topics.length === 0) return null
+  if (topics.length === 0) {
+    return (
+      <section className="px-6 pb-12 max-w-4xl mx-auto">
+        <h2 className="text-xl font-semibold mb-4 text-slate-300">知乎消费维权热榜</h2>
+        <p className="text-slate-500 text-sm text-center py-6">当前暂无消费维权相关热门话题</p>
+      </section>
+    )
+  }
 
   return (
     <section className="px-6 pb-12 max-w-4xl mx-auto">

@@ -36,7 +36,13 @@ export default function ZhihuCircle() {
           const infoData = d.data?.info?.data || d.data?.info || {}
           setInfo(infoData?.ring_info || infoData || null)
           const contents = infoData?.contents || d.data?.pins?.data || []
-          setPins(Array.isArray(contents) ? contents.slice(0, 8) : [])
+          if (!Array.isArray(contents)) return
+          const keywords = ['投诉', '维权', '消费', '售后', '退款', '赔偿', '欺诈', '虚假', '质量', '霸王条款', '315', '3·15', '曝光', '侵权', '假货', '客服', '商家', '消协', '权益', '保障', '坑', '差评', '黑心', '套路', '诈骗', '食品安全']
+          const filtered = contents.filter((p: any) => {
+            const text = (p.content || '') + (p.author_name || '')
+            return keywords.some((kw) => text.includes(kw))
+          })
+          setPins(filtered.length > 0 ? filtered.slice(0, 8) : contents.slice(0, 8))
         }
       })
       .catch(() => {})
