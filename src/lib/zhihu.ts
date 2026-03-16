@@ -19,11 +19,20 @@ function generateHeaders(method: string, path: string, body?: string) {
   }
 }
 
+async function safeJson(res: Response) {
+  const text = await res.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { error: { code: res.status, message: text.slice(0, 200) } }
+  }
+}
+
 export async function getHotTopics(hours = 24) {
   const path = '/openapi/billboard/list'
   const url = `${ZHIHU_BASE}${path}?hours=${hours}`
   const res = await fetch(url, { headers: generateHeaders('GET', path) })
-  return res.json()
+  return safeJson(res)
 }
 
 export async function zhihuSearch(keyword: string) {
@@ -34,7 +43,7 @@ export async function zhihuSearch(keyword: string) {
   const path = '/openapi/search/global'
   const url = `${ZHIHU_BASE}${path}?keyword=${encodeURIComponent(keyword)}`
   const res = await fetch(url, { headers: generateHeaders('GET', path) })
-  const data = await res.json()
+  const data = await safeJson(res)
   await redis.set(cacheKey, JSON.stringify(data), { ex: 3600 })
   return data
 }
@@ -47,7 +56,7 @@ export async function publishToCircle(content: string, ringId: string) {
     headers: generateHeaders('POST', path, body),
     body,
   })
-  return res.json()
+  return safeJson(res)
 }
 
 export async function createComment(targetId: string, targetType: string, content: string) {
@@ -58,7 +67,7 @@ export async function createComment(targetId: string, targetType: string, conten
     headers: generateHeaders('POST', path, body),
     body,
   })
-  return res.json()
+  return safeJson(res)
 }
 
 export async function toggleReaction(targetId: string, targetType: string, action: 'up' | 'cancel_up') {
@@ -69,21 +78,21 @@ export async function toggleReaction(targetId: string, targetType: string, actio
     headers: generateHeaders('POST', path, body),
     body,
   })
-  return res.json()
+  return safeJson(res)
 }
 
 export async function getCircleInfo(ringId: string) {
   const path = '/openapi/ring/detail'
   const url = `${ZHIHU_BASE}${path}?ring_id=${ringId}`
   const res = await fetch(url, { headers: generateHeaders('GET', path) })
-  return res.json()
+  return safeJson(res)
 }
 
 export async function getCirclePins(ringId: string) {
   const path = '/openapi/ring/pins'
   const url = `${ZHIHU_BASE}${path}?ring_id=${ringId}`
   const res = await fetch(url, { headers: generateHeaders('GET', path) })
-  return res.json()
+  return safeJson(res)
 }
 
 export async function deleteComment(commentId: string) {
@@ -94,12 +103,12 @@ export async function deleteComment(commentId: string) {
     headers: generateHeaders('POST', path, body),
     body,
   })
-  return res.json()
+  return safeJson(res)
 }
 
 export async function getComments(targetId: string, targetType: string) {
   const path = '/openapi/comment/list'
   const url = `${ZHIHU_BASE}${path}?target_id=${targetId}&target_type=${targetType}`
   const res = await fetch(url, { headers: generateHeaders('GET', path) })
-  return res.json()
+  return safeJson(res)
 }
